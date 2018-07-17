@@ -3,42 +3,29 @@ from threading import Thread
 import time
 
 
-class MQTTCommands:
-    def __init__(self):
-        pass
-
-    def make_action(self, msg='Guy', def1='GPIO_ON'):
-        global GPIO1_ON
-        if msg.payload.decode() == 'Guy':
-            print("action1")
-            GPIO1_ON()
-        elif msg.payload.decode() == 'Dvir':
-            print("action2")
-        else:
-            print("Donno")
-
-
-class MQTTClient(Thread, MQTTCommands):
+class MQTTClient(Thread):
     def __init__(self, sid=None, host="iot.eclipse.org", username=None, password=None, topic=None, topic_qos=None):
         Thread.__init__(self)
-        MQTTCommands.__init__(self)
+        # MQTTCommands.__init__(self)
         self.sid = sid
         self.host = host
         self.username = username
         self.password = password
         self.topic = topic
         self.topic_qos = topic_qos
-        self.client = None
+        self.client, self.arrived_msg = None, None
 
     def on_connect(self, client, obj, flags, rc):
         print(">> Connecting to MQTT server %s: %d" % (self.host, rc))
         self.client.subscribe(self.topic, qos=self.topic_qos)
 
     def on_message(self, client, obj, msg):
-        print(">> received: topic:%s msg:%s " % (msg.topic, msg.payload.decode()))
-        if msg.payload.decode() in self.ext_commands:
-            print(self.ext_commands[msg.payload.decode()])
-        self.make_action(msg)
+        self.arrived_msg = msg.payload.decode()
+        print(">> received: topic:%s msg:%s " % (msg.topic, self.arrived_msg))
+        self.call_externalf()
+
+    def call_externalf(self):
+        pass
 
     def pub(self, payload):
         self.client.publish(self.topic, payload, self.topic_qos)
@@ -53,19 +40,20 @@ class MQTTClient(Thread, MQTTCommands):
         self.client.connect(self.host, 1883, 60)
         self.client.loop_forever()
 
-    def commands(self, com_dic):
-        self.ext_commands = com_dic
-        print(com_dic)
 
+# This class is only for explanation purposes
+class AnyOtherClass:
+    def __init__(self):
+        # following lines as must in every class that ment to use MQTT_class
+        self.mqtt = MQTTClient(topic='HomePi/dvir/test1', topic_qos=0, host='192.168.2.113')
+        self.mqtt.call_externalf = lambda: self.commands(self.mqtt.arrived_msg)
+        self.mqtt.start()
 
-def GPIO1_ON():
-    print("GPIO_ON")
+    def commands(self, mqtt_msg):
+        if mqtt_msg == 'GUY':
+            print("YES")
 
 
 if __name__ == "__main__":
-    a = MQTTClient(topic='HomePi/dvir/test1', topic_qos=0, host='192.168.2.113')
-    # a.commands({'On': 'action1', 'Off': 'action2'})
-    a.start()
-    a.pub("Guy")
-    # b = MQTTCommands()
-    # getattr(b, 'make_action')
+    b = AnyOtherClass()
+
