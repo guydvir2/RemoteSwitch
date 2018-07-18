@@ -27,8 +27,10 @@ class MQTTClient(Thread):
     def call_externalf(self):
         pass
 
-    def pub(self, payload):
-        self.client.publish(self.topic, payload, self.topic_qos)
+    def pub(self, payload, topic=None):
+        if topic is None:
+            topic = self.topic
+        self.client.publish(topic, payload, self.topic_qos)
         print(">> published: topic:%s msg:%s " % (self.topic, payload))
 
     def run(self):
@@ -56,4 +58,3 @@ class AnyOtherClass:
 
 if __name__ == "__main__":
     b = AnyOtherClass()
-
