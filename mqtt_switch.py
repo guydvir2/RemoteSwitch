@@ -6,24 +6,27 @@ import time
 
 
 class MQTTClient(Thread):
-    def __init__(self, sid=None, host="iot.eclipse.org", username=None, password=None, topic=None, topic_qos=None):
+    def __init__(self, sid=None, host="iot.eclipse.org", username=None, password=None, topics=None, topic_qos=None):
         Thread.__init__(self)
         # MQTTCommands.__init__(self)
         self.sid = sid
         self.host = host
         self.username = username
         self.password = password
-        self.topic = topic
+        self.topics = topics
         self.topic_qos = topic_qos
         self.client, self.arrived_msg = None, None
 
     def on_connect(self, client, obj, flags, rc):
         print(">> Connecting to MQTT server %s: %d" % (self.host, rc))
-        self.client.subscribe(self.topic, qos=self.topic_qos)
+        for topic in self.topics:
+            print(">> Subscribe topic: %s" % topic)
+            self.client.subscribe(topic, qos=self.topic_qos)
+        
 
     def on_message(self, client, obj, msg):
         self.arrived_msg = msg.payload.decode()
-        print(">> received: topic:%s msg:%s " % (msg.topic, self.arrived_msg))
+        #print(">> received: topic:%s msg:%s " % (msg.topic, self.arrived_msg))
         self.call_externalf()
 
     def call_externalf(self):
@@ -33,7 +36,7 @@ class MQTTClient(Thread):
         if topic is None:
             topic = self.topic
         self.client.publish(topic, payload, self.topic_qos)
-        print(">> published: topic:%s msg:%s " % (self.topic, payload))
+        # print(">> published: topic:%s msg:%s " % (topic, payload))
 
     def run(self):
         self.client = mqtt.Client(str(self.sid))
@@ -49,7 +52,7 @@ class MQTTClient(Thread):
 class AnyOtherClass:
     def __init__(self):
         # following lines as must in every class that ment to use MQTT_class
-        self.mqtt = MQTTClient(topic='HomePi/dvir/test1', topic_qos=0, host='192.168.2.113')
+        self.mqtt = MQTTClient(topics=['HomePi/dvir/test1'], topic_qos=0, host='192.168.2.113')
         self.mqtt.call_externalf = lambda: self.commands(self.mqtt.arrived_msg)
         self.mqtt.start()
 
