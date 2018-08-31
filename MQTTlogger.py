@@ -4,12 +4,12 @@ import datetime
 import os
 
 
-class MQTTlogger(Thread):
-    def __init__(self, sid=None, host="192.168.2.113", username=None,
+class LogMQTTactivity(Thread):
+    def __init__(self, sid=None, mqtt_server="192.168.2.113", username=None,
                  password=None, topics=None, topic_qos=None, filename='/Users/guy/MQTT.log'):
         Thread.__init__(self)
         self.sid = sid
-        self.host = host
+        self.mqtt_server = mqtt_server
         self.filename = filename
         self.username = username
         self.password = password
@@ -22,11 +22,12 @@ class MQTTlogger(Thread):
         self.log_header()
 
     def log_header(self):
-        tmp = ''
-        topics_text = ["%d)Topic: %s" % (i, topic) for i, topic in enumerate(self.topics)]
-        for text in topics_text:
-            tmp = tmp + '\n' + text
-        self.append_log("\nMQTT logger for Topics: %s\n" % tmp)
+        text = ' Connect to following topics '
+        x = 12
+        self.append_log('*' * x + text + x * "*")
+        for topic in self.topics:
+            self.append_log(topic)
+        self.append_log('*' * 2 * x + len(text) * "*")
 
     def run(self):
         self.client = mqtt.Client(str(self.sid))
@@ -34,11 +35,11 @@ class MQTTlogger(Thread):
         self.client.on_message = self.on_message
         if self.username is not None and self.password is not None:
             self.client.username_pw_set(self.username, self.password)
-        self.client.connect(self.host, 1883, 60)
+        self.client.connect(self.mqtt_server, 1883, 60)
         self.client.loop_forever()
 
     def on_connect(self, client, obj, flags, rc):
-        self.append_log(">> Connecting to MQTT server %s: %d" % (self.host, rc))
+        self.append_log(">> Connecting to MQTT mqtt_server %s: %d" % (self.mqtt_server, rc))
         for topic in self.topics:
             self.append_log(">> Subscribe topic: %s" % topic)
             self.client.subscribe(topic, qos=self.topic_qos)
@@ -77,6 +78,6 @@ class MQTTlogger(Thread):
             print(self.msg)
 
 
-a = MQTTlogger(sid="MQTTlogger", topics=['HomePi/Dvir/Windows/All', 'HomePi/Dvir/Messages'], topic_qos=0)
+a = LogMQTTactivity(sid="MQTTlogger", topics=['HomePi/Dvir/Windows/All', 'HomePi/Dvir/Messages'], topic_qos=0,
+                    mqtt_server="192.168.2.203", username="guy", password="kupelu9e")
 a.start()
-
